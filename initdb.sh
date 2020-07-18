@@ -19,8 +19,9 @@ USAGE
 dc_reset=0
 dc_reset_all=0
 dc_build_app=1
+git_init=0
 
-args=`getopt hbrR $*` || { usage && exit 2; }
+args=`getopt hgbrR $*` || { usage && exit 2; }
 set -- $args
 for opt
 do
@@ -40,6 +41,10 @@ do
 	    ;;
 	  -r)
 	    dc_reset=1
+      shift
+      ;;
+    -g)
+      git_init=1
       shift
       ;;
   esac
@@ -96,8 +101,6 @@ done
   cd ${APP_DIR}
   # do the initial migration
   ./manage.py migrate
-  # do the initial migration
-  ./manage.py migrate
   # add the superuser
   ./manage.py createsuperuser
 )
@@ -105,6 +108,22 @@ done
 if [ ${dc_build_app} != 0 ]; then
 
   docker-compose build app
+
+fi
+
+if [ ${git_init} != 0 ]; then
+
+  # Initialise a git repo
+  # Remove /.env exclusion - the project needs it
+  while read -r line
+    [[ ${line} != '/.env' ]] echo "${line}"
+  do
+  done < .gitignore > .gitignore.new
+  mv .gitignore.new .gitignore
+
+  git init .
+  git add -A
+  git commit -m 'Initial commit'
 
 fi
 
@@ -118,7 +137,13 @@ cat <<WELCOME
 
     $ cd ${APP_DIR}
     $ ./manage.py runserver
-  OR
+
+  Runs the local development server (non-async)
+
+  - OR -
+
     $ docker-compose up -d app
+
+  Use uvicorn to serve the app (async)
 
 WELCOME
