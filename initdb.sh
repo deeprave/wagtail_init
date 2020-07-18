@@ -117,8 +117,8 @@ if [ ${git_init} != 0 ]; then
   # Initialise a git repo
   # Remove /.env exclusion - the project needs it
   while read -r line
-    [[ ${line} != '/.env' ]] echo "${line}"
   do
+    [[ ${line} != '/.env' ]] && echo "${line}"
   done < .gitignore > .gitignore.new
   mv .gitignore.new .gitignore
 
