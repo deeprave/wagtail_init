@@ -26,14 +26,14 @@ DJANGO_SECRET_KEY=
 DJANGO_MODE=dev
 BASE_URL='http://example.com'
 
-# if there i an existing .env, source it to retain values as defaults across sessions
+# if there is an existing .env, source it to retain values as defaults across sessions
 [ -f .env ] && source .env
 
-function usage {
+function usage() {
   msg="$*"
   [ ! -z "${msg}" ] && echo ${msg} 1>&2
   cat <<USAGE
-`basename "$0"`: [options] [appname]
+$(basename "$0"): [options] [appname]
 General Options:
  -P <name>      set project name     | -S             random SECRET_KEY
  -a <name>      set app name         | -d <directory> set app subdir
@@ -48,19 +48,20 @@ PostgreSQL Options:                  | Redis Options:
  -w <password>  app password         |  -E <n>         prefix default database
  -G <password>  sa postgres password |                 and redis ports [1-6]
 USAGE
-[ -z "${VIRTUAL_ENV}" ] && echo; echo "** WARNING: no virtualenv detected **"
+  [ -z "${VIRTUAL_ENV}" ] && echo
+  echo "** WARNING: no virtualenv detected **"
 }
 
-function secretkey {
-	LC_ALL=C openssl rand 50 | base64
+function secretkey() {
+  LC_ALL=C openssl rand 50 | base64
 }
 
-function random_password {
-	LC_ALL=C tr -dc '[:alnum:]' </dev/urandom | dd bs=16 count=1 2>/dev/null
+function random_password() {
+  LC_ALL=C tr -dc '[:alnum:]' </dev/urandom | dd bs=16 count=1 2>/dev/null
 }
 
-function lowercase {
-	echo "$1" | tr '[:upper:]' '[:lower:]'
+function lowercase() {
+  echo "$1" | tr '[:upper:]' '[:lower:]'
 }
 
 # working variables
@@ -73,117 +74,135 @@ psql_pass=0
 sleep_interval=5.0
 
 # parse the command line
-args=`getopt hpSe:E:a:d:i:p:u:w:g:rRI:P:c:s:E:U: $*` || { usage && exit 2; }
+args=$(getopt hpSe:E:a:d:i:p:u:w:g:rRI:P:c:s:E:U: $*) || { usage && exit 2; }
 set -- $args
-for opt
-do
-	case "$opt" in
-		-h)
-			usage
-			exit 1
-			;;
-		-P)
-			COMPOSE_PROJECT_NAME=${2}
-			shift; shift
-			;;
-		-a)
-			APP_NAME=`lowercase ${2}` && { [ ${dir_set} == 0 ] && APP_DIR="${2}" && dir_set=1; }
-			shift; shift
-			;;
-		-U)
-			BASE_URL=${2}
-			shift; shift
-			;;
-		-S)
-			DJANGO_SECRET_KEY=`secretkey`
-			shift
-			;;
-		-d)
-			APP_DIR=${2} && dir_set=1
-			shift; shift
-			;;
-		-n)
-			DBNAME=${2} && name_set=1
-			shift; shift
-			;;
-		-i)
-			DBHOST=${2}
-			shift; shift
-			;;
-		-p)
-			DBPORT=${2}
-			shift; shift
-			;;
-		-g)
-			DBROLE=${2} && role_set=1
-			[ ${user_name} == 0 ] && DBUSER=${2}user && user_name=1
-			[ ${name_set} == 0 ] && DBNAME=${2} && name_set=1
-			shift; shift
-			;;
-		-u)
-			DBUSER=${2} && user_name=1
-			[ ${name_set} == 0 ] && DBNAME=${2} && name_set=1
-			shift; shift
-			;;
-		-w)
-			DBPASS=${2} && user_pass=1
-			shift; shift
-			;;
-		-r)
-			DBPASS="`random_password`" && user_pass=1
-			shift
-			;;
-		-G)
-			POSTGRES_PASSWORD="${2}" && psql_pass=1
-			shift; shift
-			;;
-		-R)
-			POSTGRES_PASSWORD="`random_password`" && psql_pass=1
-			[ ${user_pass} == 0 ] && DBPASS="`random_password`" && user_pass=1
-			shift
-			;;
-		-I)
-			RDHOST=${2} 
-			shift; shift
-			;;
-		-P)
-			RDPORT=${2} 
-			shift; shift
-			;;
-		-E)
-			DBPORT=${2}5432
-			RDPORT=${2}6379
-			shift; shift
-			;;
-		-c)
-			RD0=${2} 
-			shift; shift
-			;;
-		-s)
-			RD1=${2} 
-			shift; shift
-			;;
-		--)
-			shift
-			break
-			;;
-	esac
+for opt; do
+  case "$opt" in
+  -h)
+    usage
+    exit 1
+    ;;
+  -P)
+    COMPOSE_PROJECT_NAME=${2}
+    shift
+    shift
+    ;;
+  -a)
+    APP_NAME=$(lowercase ${2}) && { [ ${dir_set} == 0 ] && APP_DIR="${2}" && dir_set=1; }
+    shift
+    shift
+    ;;
+  -U)
+    BASE_URL=${2}
+    shift
+    shift
+    ;;
+  -S)
+    DJANGO_SECRET_KEY=$(secretkey)
+    shift
+    ;;
+  -d)
+    APP_DIR=${2} && dir_set=1
+    shift
+    shift
+    ;;
+  -n)
+    DBNAME=${2} && name_set=1
+    shift
+    shift
+    ;;
+  -i)
+    DBHOST=${2}
+    shift
+    shift
+    ;;
+  -p)
+    DBPORT=${2}
+    shift
+    shift
+    ;;
+  -g)
+    DBROLE=${2} && role_set=1
+    [ ${user_name} == 0 ] && DBUSER=${2}user && user_name=1
+    [ ${name_set} == 0 ] && DBNAME=${2} && name_set=1
+    shift
+    shift
+    ;;
+  -u)
+    DBUSER=${2} && user_name=1
+    [ ${name_set} == 0 ] && DBNAME=${2} && name_set=1
+    shift
+    shift
+    ;;
+  -w)
+    DBPASS=${2} && user_pass=1
+    shift
+    shift
+    ;;
+  -r)
+    DBPASS="$(random_password)" && user_pass=1
+    shift
+    ;;
+  -G)
+    POSTGRES_PASSWORD="${2}" && psql_pass=1
+    shift
+    shift
+    ;;
+  -R)
+    POSTGRES_PASSWORD="$(random_password)" && psql_pass=1
+    [ ${user_pass} == 0 ] && DBPASS="$(random_password)" && user_pass=1
+    shift
+    ;;
+  -I)
+    RDHOST=${2}
+    shift
+    shift
+    ;;
+  -P)
+    RDPORT=${2}
+    shift
+    shift
+    ;;
+  -E)
+    DBPORT=${2}5432
+    RDPORT=${2}6379
+    shift
+    shift
+    ;;
+  -c)
+    RD0=${2}
+    shift
+    shift
+    ;;
+  -s)
+    RD1=${2}
+    shift
+    shift
+    ;;
+  --)
+    shift
+    break
+    ;;
+  esac
 done
 
 rest=${*}
 if [ ! -z "${rest}" ]; then
   COMPOSE_PROJECT_NAME=${rest}
-  APP_NAME=`lowercase ${rest}`
+  APP_NAME=$(lowercase ${rest})
   [ ${dir_set} == 0 ] && APP_DIR=${APP_NAME}
   [ ${name_set} == 0 ] && DBNAME=${APP_NAME}
   [ ${user_name} == 0 ] && DBUSER=${APP_NAME}_user
   [ ${role_set} == 0 ] && DBROLE=${APP_NAME}
-  [ ${user_pass} == 0 ] && DBPASS="`random_password`"
-  [ ${psql_pass} == 0 ] && POSTGRES_PASSWORD="`random_password`"
-  DJANGO_SECRET_KEY=`secretkey`
+  [ ${user_pass} == 0 ] && DBPASS="$(random_password)"
+  [ ${psql_pass} == 0 ] && POSTGRES_PASSWORD="$(random_password)"
+  DJANGO_SECRET_KEY=$(secretkey)
 fi
 
-[ -z "${VIRTUAL_ENV}" ] && { echo "this script requires an active virtualenv"; exit 3; }
+[ -z "${VIRTUAL_ENV}" ] && {
+  echo "this script requires an active virtualenv"
+  exit 3
+}
 
 cat <<ENV | tee .env
 COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
@@ -214,7 +233,7 @@ echo ""
 read -p "Check values above - press ENTER to continue or ^C to abort."
 echo ""
 
-function action {
+function action() {
   msg="$*"
   echo '=>' About to $msg
   sleep ${sleep_interval}
@@ -228,6 +247,13 @@ pip install -q -r requirements-dev.txt
 action create wagtail project
 mkdir -p ${APP_DIR}
 wagtail start ${APP_NAME} ${APP_DIR}
+
+git_ignore=${APP_DIR}/.gitignore
+echo '# no version control in these dirs' >${git_ignore}
+for content in documents media static; do
+  mkdir -p ${APP_DIR}/${content}
+  echo ${content}/ >>${git_ignore}
+done
 
 # tidy & additions
 action adjust wagtail settings
