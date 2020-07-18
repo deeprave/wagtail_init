@@ -2,15 +2,22 @@
 
 ## Purpose
 
-This repository contains a quick start for a Django/Wagtail project, specifically the non-code infrastructure to build an environment for development with Wagtail. It is not dependent on any specific version of django or wagtail, but install django via wagtail to ensure compatible versions are installed.
+This repository contains a quick start (which I have repeated many times!) for an environment supporting a Django/Wagtail project, specifically the non-code infrastructure to build an environment for development with Wagtail. It is not dependent on any specific version of Django or Wagtail - it defaults to the "latest" release of Wagtail and installs a compatible version of Django.
 
 ## Features
 
-* variable data is managed in a generated .env, which become defaults for the next time
-* docker-compose.yml for building and running all the stuff that’s (almost) always the same: postgresql relational database and redis nosql key store
-* docker-compose-app.yml for running these with the containerised application
+* variable data is managed in a generated .env, which then become defaults for the next run
+* `docker-compose-services.yml` for building and running all the stuff that’s (almost) always the same: PostgreSQL relational database for the ORM and redis nosql key store for web and session cache
+* `docker-compose.yml` for running these with the containerised application
 
-The second compose file (-app) by default mounts the application directory into the app container, which is a suitable configuration for development. The Dockerfile is a multi-staged build, and changing the container name will build the container with the code deployed inside the container.
+docker-compose.yml by default mounts the application directory on the host into the app container along with media and static folders, which is a suitable configuration for development. No development tools are installed within the container and it assumes that wheels exist for all packages, which is not true for some time after a new Python release.
+
+For production use, volumes need to be modified in `docker-compose.yml`:
+
+* remove the mount to the `${DJANGO_ROOT}` dir - the application code is already copied there in Dockerfile
+* replace `${PWD}/${APP_NAME}` with `data-static` and `data-media` respectively to create and use internal docker volumes for data that need persistence. Alternatively these can be mounted anywhere on the host system.
+* using a front-end or reverse proxy server (nginx or apache-http) would be required to expose correct ports and serve via https.
+
 
 ## Pre-requisites
 
@@ -19,7 +26,7 @@ The second compose file (-app) by default mounts the application directory into 
 * virtualenv (or python -m venv)
 * (optional but recommended) virtualenvwrapper
 * bourne compatible shell (bash works)
-* svn (recommended only to export this code instead of clone) - see below<br>_Note: "git svn" has no export subcommand_.
+* svn (recommended only to export this code instead of clone) - see below<br/>_Note: "git svn" has no **export** subcommand_.
 * an internet connection
 * docker, any recent version should work
 * docker-compose, usually comes with the docker package but can be separately installed
@@ -27,9 +34,20 @@ The second compose file (-app) by default mounts the application directory into 
 
 ## Setup Scripts
 
+This is a three step process detailed in the next section:
+
+1. export or clone this repository
+2. run the init.sh script (requires parameters for customisation)
+	* installs wagtail code and python dependencies
+3. run the initdb.sh script:
+	* creates the database, role and user
+	* does the initial database migration
+	* creates the Django/Wagtail superuser
+	* Builds the app container
+
 ### Quick Start
 
-Pulling down the entire git repository is unnecessary (unless you plan on making a pull request). If convenient, use **svn** to *export only the required the files*:
+Pulling down the git repository is unnecessary (unless you plan on making a pull request). If convenient, use **svn** to *export only the required the files*:
 ```sh
 $ svn export https://github.com/deeprave/wagtail_init/trunk targetdir
 ```
