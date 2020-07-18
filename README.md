@@ -4,6 +4,7 @@
 
 This repository contains a quick start (which I have repeated many times!) for an environment supporting a Django/Wagtail project, specifically the non-code infrastructure to build an environment for development with Wagtail. It is not dependent on any specific version of Django or Wagtail - it defaults to the "latest" release of Wagtail and installs a compatible version of Django.
 
+
 ## Features
 
 * variable data is managed in a generated .env, which then become defaults for the next run
@@ -16,7 +17,8 @@ For production use, volumes need to be modified in `docker-compose.yml`:
 
 * remove the mount to the `${DJANGO_ROOT}` dir - the application code is already copied there in Dockerfile
 * replace `${PWD}/${APP_NAME}` with `data-static` and `data-media` respectively to create and use internal docker volumes for data that need persistence. Alternatively these can be mounted anywhere on the host system.
-* using a front-end or reverse proxy server (nginx or apache-http) would be required to expose correct ports and serve via https.
+* using a front-end or reverse proxy server (nginx or apache-http) would be required to expose correct ports and serve via https. `/media/` and `/static/` paths can be served directly from the front-end.
+* uncomment `./manage.py collectstatic --no-input` in the Dockerfile and rebuild the app container `docker-compose build app`
 
 
 ## Pre-requisites
@@ -45,6 +47,7 @@ This is a three step process detailed in the next section:
 	* creates the Django/Wagtail superuser
 	* Builds the app container
 
+
 ### Quick Start
 
 Pulling down the git repository is unnecessary (unless you plan on making a pull request). If convenient, use **svn** to *export only the required the files*:
@@ -58,6 +61,7 @@ $ git clone https://github.com/deeprave/wagtail_init.git <targetdir>
 $ rm -rf <targetdir>/.git
 ```
 Change into your target dir, create or activate your python virtual environment and run the following script.
+
 
 ### init.sh
 
@@ -98,6 +102,7 @@ The content of ".env" is displayed. Hit ENTER  to continue.
 
 At this point, the basic structure and requirements are set up and almost ready to run the development server.
 
+
 ### initdb.sh
 
 This is the next step - `./initdb.sh` creates and sets up the PostgreSQL database.
@@ -110,4 +115,6 @@ When run more than once for the same project and the postgres password has chang
 ## Notes
 ### Database Setup
 
-Using a role with all the required privileges and nologin is good practice when it comes to database user setup. The login user - **NOT postgres**  -  used by the application simply inherits all it needs from its parent role.  The role is also given createdb privilege to enable creating and destroying the test database when running unit tests.
+Using a role with all the required privileges and nologin is good practice when it comes to database user setup.
+
+The login user - **NOT postgres**  - used by the application simply inherits all it needs from its parent role.  This role is also given createdb privilege to enable creating and destroying the test database when running unit tests.

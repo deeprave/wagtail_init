@@ -7,10 +7,11 @@ function usage {
   cat <<USAGE
 `basename "$0"`: [options]
 Options:
-  -h     this help message
-  -r     reset postgres docker data volume for this project
-  -R     reset all docker data volumes for this project
-  -b     build and run the app docker container
+  -h    this help message
+  -r    reset postgres docker data volume for this project
+  -R    reset all docker data volumes for this project
+  -b    (re)build the app docker container
+  -g    initialise and update a local git repository
 
 ** note: to set the postgres admin password a postgres data reset is required
 USAGE
