@@ -35,7 +35,7 @@ function usage {
   cat <<USAGE
 `basename "$0"`: [options] [appname]
 General Options:
- -p <name>      set project name     | -S             random SECRET_KEY
+ -P <name>      set project name     | -S             random SECRET_KEY
  -a <name>      set app name         | -d <directory> set app subdir
  -U <url>       set site base url    | -R             generate passwords
  -h             this help message
@@ -82,7 +82,7 @@ do
 			usage
 			exit 1
 			;;
-		-p)
+		-P)
 			COMPOSE_PROJECT_NAME=${2}
 			shift; shift
 			;;

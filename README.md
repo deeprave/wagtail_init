@@ -75,7 +75,7 @@ Run `./init.sh -h` for help (shown below). This must be run from the the current
 ```sh
 init.sh: [options] [app_name]
 General Options:
- -p <name>      set project name     | -S             random SECRET_KEY
+ -P <name>      set project name     | -S             random SECRET_KEY
  -a <name>      set app name         | -d <directory> set app subdir
  -U <url>       set site base url    | -R             generate passwords
  -h             this help message
