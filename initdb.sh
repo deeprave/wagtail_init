@@ -1,5 +1,5 @@
 #!/bin/sh
-[ -f .env ] && source .env || { echo ".env does not exist!" && exit 1; }
+[ -f ./.env ] && source ./.env || { echo ".env does not exist!" && exit 1; }
 
 function usage {
   msg="$*"
@@ -8,10 +8,11 @@ function usage {
 `basename "$0"`: [options]
 Options:
   -h    this help message
-  -r    reset postgres docker data volume for this project
+  -D    services run in docker (docker-compose-services)
+  -r    reset postgres data
   -R    reset all docker data volumes for this project
   -b    (re)build the app docker container
-  -g    initialise and update a local git repository
+  -g    update a local git repository (initialise if nencessary)
 
 ** note: to set the postgres admin password a postgres data reset is required
 USAGE
@@ -19,29 +20,38 @@ USAGE
 
 dc_reset=0
 dc_reset_all=0
-dc_build_app=1
+dc_build_app=0
+dc_docker=0
 git_init=0
 
-args=`getopt hgbrR $*` || { usage && exit 2; }
+SELECT_DATABASE=
+
+args=`getopt hgdbrR $*` || { usage && exit 2; }
 set -- $args
 for opt
 do
-	case "$opt" in
-		-h)
-			usage
-			exit 1
-			;;
+  case "$opt" in
+    -h)
+      usage
+      exit 1
+      ;;
+    -D)
+      dc_docker=1
+      SELECT_DATABASE="-h ${DBNAME}"
+      shift
+      ;;
     -b)
       dc_build_app=1
       shift
       ;;
-	  -R)
-	    dc_reset_all=1
-	    dc_reset=1
-	    shift
-	    ;;
-	  -r)
-	    dc_reset=1
+    -R)
+      dc_reset_all=1
+      dc_reset=1
+      dc_docker=1
+      shift
+      ;;
+    -r)
+      dc_reset=1
       shift
       ;;
     -g)
@@ -52,33 +62,44 @@ do
 done
 
 if [ ${dc_reset} != 0 ]; then
-  # check to see if anything is running
-  if [ ! -z "`docker ps -q -f name=${COMPOSE_PROJECT_NAME}`" ]; then
-    echo '*>' Stopping all running containers
-    docker-compose down
-  fi
-  if [ ${dc_reset_all} != 0 ]; then
-    # remove all project volumes
-    volumes=`docker volume ls -q -f name=${COMPOSE_PROJECT_NAME}`
+  if [ ${dc_docker} != 0 ]; then
+    # check to see if anything is running
+    if [ ! -z "`docker ps -q -f name=${COMPOSE_PROJECT_NAME}`" ]; then
+      echo '*>' Stopping all running containers
+      docker-compose down
+    fi
+    if [ ${dc_reset_all} != 0 ]; then
+      # remove all project volumes
+      volumes=`docker volume ls -q -f name=${COMPOSE_PROJECT_NAME}`
+    else
+      # remove project postgres volume
+      volumes=`docker volume ls -q -f name=${COMPOSE_PROJECT_NAME}_data-pgdata`
+    fi
+    if [ ! -z "${volumes}" ]; then
+      echo '*>' Removing volumes ${volumes}
+      docker volume rm ${volumes}
+    fi
   else
-    # remove project postgres volume
-    volumes=`docker volume ls -q -f name=${COMPOSE_PROJECT_NAME}_data-pgdata`
-  fi
-  if [ ! -z "${volumes}" ]; then
-    echo '*>' Removing volumes ${volumes}
-    docker volume rm ${volumes}
+    PGPASSWORD="${POSTGRES_PASSWORD}" psql -p ${DBPORT} postgres postgres <<SQL
+drop database ${DBNAME};
+drop user ${DBUSER};
+drop role ${DBROLE};
+SQL
   fi
 fi
 
-if [ -z "`docker ps -q -f name=${COMPOSE_PROJECT_NAME}`" ]; then
-  echo '*>' Starting ${COMPOSE_PROJECT_NAME} service containers
-  docker-compose -f docker-compose-services.yml up -d
-  echo '*>' Waiting a few seconds for the database to come up
-  sleep 10.0
+if [ ${dc_docker} != 0 ]; then
+  if [ -z "`docker ps -q -f name=${COMPOSE_PROJECT_NAME}`" ]; then
+    echo '*>' Starting ${COMPOSE_PROJECT_NAME} service containers
+    docker-compose -f docker-compose-services.yml up -d
+    echo '*>' Waiting a few seconds for the database to come up
+    sleep 10.0
+  fi
 fi
 
 # create a role with a user, use permission inheritance for convenience
-PGPASSWORD="${POSTGRES_PASSWORD}" psql -h ${DBHOST} -p ${DBPORT} postgres postgres <<SQL
+echo "Setting up database roles"
+PGPASSWORD="${POSTGRES_PASSWORD}" psql ${SELECT_DATABASE} -p ${DBPORT} postgres postgres <<SQL
 create role ${DBROLE} createdb;
 create user ${DBUSER} createrole inherit password '${DBPASS}';
 grant ${DBROLE} to ${DBUSER};
@@ -88,23 +109,11 @@ alter role ${DBROLE} set timezone to 'UTC';
 SQL
 
 # create the database(es)
-for db_name in ${DBNAME}
-do
-  echo "Creating database: ${db_name}"
-	PGPASSWORD="${POSTGRES_PASSWORD}" psql -h ${DBHOST} -p ${DBPORT} postgres postgres <<SQL
-create database ${db_name} with owner ${DBROLE};
-grant all privileges on database ${db_name} to ${DBROLE};
+echo "Creating database: ${DBNAME}"
+PGPASSWORD="${POSTGRES_PASSWORD}" psql ${SELECT_DATABASE} -p ${DBPORT} postgres postgres <<SQL
+create database ${DBNAME} with owner ${DBROLE};
+grant all privileges on database ${DBNAME} to ${DBROLE};
 SQL
-done
-
-# do intialisation in sub-shell
-(
-  cd ${APP_DIR}
-  # do the initial migration
-  ./manage.py migrate
-  # add the superuser
-  ./manage.py createsuperuser
-)
 
 if [ ${dc_build_app} != 0 ]; then
 
@@ -112,17 +121,15 @@ if [ ${dc_build_app} != 0 ]; then
 
 fi
 
+# do intialisation if required
+docker-compose run app ./manage.py migrate
+docker-compose run app ./manage.py createuseruser
+docker-compose run app ./manage.py collectstatic --no-input
+
 if [ ${git_init} != 0 ]; then
 
   # Initialise a git repo
-  # Remove /.env exclusion - the project needs it
-  while read -r line
-  do
-    [[ ${line} != '/.env' ]] && echo "${line}"
-  done < .gitignore > .gitignore.new
-  mv .gitignore.new .gitignore
-
-  git init .
+  [ ! -d .git ] && git init .
   git add -A
   git commit -m 'Initial commit'
 
