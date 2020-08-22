@@ -24,24 +24,28 @@ For production use, volumes need to be modified in `docker-compose.yml`:
 ## Pre-requisites
 
 * git
-* python 3.6+
+* python 3.7+
 * virtualenv (or python -m venv)
-* (optional but recommended) virtualenvwrapper
+* (optional, but recommended) virtualenvwrapper
 * bourne compatible shell (bash works)
-* svn (recommended only to export this code instead of clone) - see below<br/>_Note: "git svn" has no **export** subcommand_.
 * an internet connection
 * docker, any recent version should work
 * docker-compose, usually comes with the docker package but can be separately installed
+
+#### Optional
+* svn (recommended only to export this code instead of clone) - see below<br/>_Note: "git svn" has no **export** subcommand_.
 
 
 ## Setup Scripts
 
 This is a three step process detailed in the next section:
 
+*This repository can be used as a template directly on GitHub to generate a new project!*. To do so, click on the **Use this template** button on the [wagtail_init home page](https://github.com/deeprave/wagtail_init), clone your new repo and skip step 1.
+
 1. export or clone this repository
-2. run the init.sh script (requires parameters for customisation)
-	* installs wagtail code and python dependencies
-3. run the initdb.sh script:
+2. run the init.sh script (requires parameters for customisation, -h for help)
+	* installs wagtail, Django and python dependencies
+3. run the initdb.sh script (again, -h for help):
 	* creates the database, role and user
 	* does the initial database migration
 	* creates the Django/Wagtail superuser
@@ -50,7 +54,8 @@ This is a three step process detailed in the next section:
 
 ### Quick Start
 
-Pulling down the git repository is unnecessary (unless you plan on making a pull request). If convenient, use **svn** to *export only the required the files*:
+The **Use this template** as detailed above is the fastest and easier way to get started.
+Otherwise pulling down the git repository is unnecessary (unless you plan on making a pull request). If convenient, use **svn** to *export only the required the files* or use .
 ```sh
 $ svn export https://github.com/deeprave/wagtail_init/trunk targetdir
 ```
@@ -73,12 +78,13 @@ Recommended but not required - create the virtual environment in some convenient
 
 Run `./init.sh -h` for help (shown below). This must be run from the the current folder. The django/wagtail project is created 1 level below.
 ```sh
-init.sh: [options] [app_name]
+init.sh: [options] [appname]
 General Options:
- -P <name>      set project name     | -S             random SECRET_KEY
+ -P <name>      set project name     | -K             generate random SECRET_KEY
  -a <name>      set app name         | -d <directory> set app subdir
  -U <url>       set site base url    | -R             generate passwords
- -h             this help message
+ -S             run docker services  | -e             use data volumes for app
+ -D key=val     set env key to value | -h             this help message
 PostgreSQL Options:                  | Redis Options:
  -i <hostname>  hostname (use IP)    |  -I <hostname>  hostname (use IP)
  -p <port>      port                 |  -P <port>      port
@@ -106,10 +112,23 @@ At this point, the basic structure and requirements are set up and almost ready 
 ### initdb.sh
 
 This is the next step - `./initdb.sh` creates and sets up the PostgreSQL database.
+```
+initdb.sh: [options]
+Options:
+  -h    this help message
+  -S    services run in docker (docker-compose-services)
+  -r    reset postgres data
+  -R    reset all docker data volumes for this project
+  -b    (re)build the app docker container
+  -g    update a local git repository (initialise if necessary)
+  -m    run database migrations
+
+```
+Please take care when using this script, and read the effect of each option carefully as it allows databases and docker volumes to be completely destroyed and rebuilt. "reset postgres data" means dropping the database itself and users, recreating them from scratch. "reset all docker data volumes" will remove every volume referenced in all the docker files for the current project.
 
 If the script detects that the database is not running it will be started (else all that follows will fail). When these containers are spun up for the first time on a system, images will be downloaded from hub.docker.com.
 
-When run more than once for the same project and the postgres password has changed, the `-r` should be used to reset the previous database instance so that the postgres (system administrator) password can be set. This this can only be done when the database is initialised. This is a destructive option and should not be used if the database contains anything of value. By default, a *password is required for the postgres user* by this docker image (the latest official postgres image is used), although there are workarounds for this by trusting any connection as detailed on the [postgres docker hub page](https://hub.docker.com/_/postgres), but this is not recommended and not compatible with these scripts.
+When run more than once for the same project and the postgres password has changed, the `-r` should be used to reset the previous database instance so that the postgres (system administrator) password can be set. This this can only be done when the database is initialised and will cause loss of any existing data. This is a destructive option and should not be used if the database contains anything of value. By default, a *password is required for the postgres user* by this docker image (the latest official postgres image is used), although there are workarounds for this by trusting any connection as detailed on the [postgres docker hub page](https://hub.docker.com/_/postgres), but this is not recommended and not compatible with these scripts.
 
 
 ## Notes
