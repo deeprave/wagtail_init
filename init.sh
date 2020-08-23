@@ -81,7 +81,6 @@ dc_data=0
 # parse the command line
 args=`getopt X:D:E:a:d:u:n:w:G:g:i:I:p:P:c:s:E:U:hperRSK $*` || { usage && exit 2; }
 set -- $args
-echo ${args}
 for opt
 do
   case "$opt" in
