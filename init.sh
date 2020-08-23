@@ -84,8 +84,7 @@ set -- $args
 echo ${args}
 for opt
 do
-env   case "$opt"
-  in
+  case "$opt" in
     -h)
       usage
       exit 1
