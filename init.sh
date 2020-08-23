@@ -41,7 +41,7 @@ General Options:
  -X <name>      set project name     | -K             generate random SECRET_KEY
  -a <name>      set app name         | -d <directory> set app subdir
  -U <url>       set site base url    | -R             generate passwords
- -S             run docker services  | -e             use data volumes for app
+ -S             incl docker services | -e             use data volumes for app
  -D key=val     set env key to value | -h             this help message
 PostgreSQL Options:                  | Redis Options:
  -i <hostname>  hostname (use IP)    |  -I <hostname>  hostname (use IP)
